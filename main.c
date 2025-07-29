@@ -30,7 +30,7 @@ static int setTerminal(int fd) {
 	tty.c_cflag &= ~PARENB;
 	tty.c_cflag &= ~CSTOPB;
 	tty.c_cflag &= ~CSIZE;
-	tty.c_cflag |= ~CS8;
+	tty.c_cflag |= CS8;
 	tty.c_cflag &= ~CRTSCTS;
 	tty.c_cflag |= CREAD | CLOCAL;
 
