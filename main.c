@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <sys/select.h>
 
 static int openPort(void) {
 	int fd = open("/dev/ttyACM0", O_RDONLY);
@@ -59,16 +60,34 @@ int main(void) {
 	if (setTerminal(fd)) {
 		return EXIT_FAILURE;
 	}
+	printf("Serial monitor started. Press Ctrl + C to exit.\n");
 
 	memset(buf, 0, 256);
 	while (1) {
-		if (read(fd, buf, 255) < 0) {
-			perror("Error from read");
+		fd_set read_fds;
+		FD_ZERO(&read_fds);
+		FD_SET(STDIN_FILENO, &read_fds);
+		FD_SET(fd, &read_fds);
+
+		if (select(fd + 1, &read_fds, NULL, NULL, NULL) < 0) {
+			perror("Error from select");
 			return EXIT_FAILURE;
-		} else {
-			write(STDOUT_FILENO, buf, strlen(buf));
-			memset(buf, 0, 256);
+		}
+		if (FD_ISSET(STDIN_FILENO, &read_fds)) {
+			char write_buf[256];
+			int len = read(STDIN_FILENO, write_buf, sizeof(write_buf));
+			if (len > 0) {
+				write(fd, write_buf, len);
+			}
+		}
+		if (FD_ISSET(fd, &read_fds)) {
+			char read_buf[256];
+			int len = read(fd, read_buf, sizeof(read_buf));
+			if (len > 0) {
+				write(STDIN_FILENO, read_buf, len);
+			}
 		}
 	}
+	close(fd);
 	return EXIT_SUCCESS;
 }
